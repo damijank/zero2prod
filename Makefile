@@ -9,3 +9,7 @@ docker-run:
 do-create:
 	doctl apps create --spec - < spec.yaml
 .PHONY: do-create
+
+do-update:
+	doctl apps update `doctl apps list --no-header --format Spec.Name,ID --output text | grep zero2prod | tr --squeeze-repeats ' ' | cut --delimiter ' ' --fields 2` --spec - < spec.yaml
+.PHONY: do-update
