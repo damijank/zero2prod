@@ -1,0 +1,14 @@
+.git/
+.gitignore
+.github/
+
+.idea/
+
+Makefile
+
+.env
+target/
+tests/
+Dockerfile
+scripts/
+migrations/
