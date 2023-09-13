@@ -5,6 +5,7 @@
 .idea/
 
 Makefile
+manual/
 
 .env
 target/
