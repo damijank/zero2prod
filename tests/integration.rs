@@ -66,6 +66,29 @@ pub async fn configure_db(config: &DatabaseSettings) -> PgPool {
 }
 
 #[tokio::test]
+async fn version_works() {
+    // Arrange
+    let app = spawn_app().await;
+    let client = reqwest::Client::new();
+
+    // Act
+    let response = client
+        .get(format!("http://{}/", &app.address))
+        .send()
+        .await
+        .expect("Failed to execute request.");
+    let status = response.status();
+    let content = response
+        .text()
+        .await
+        .expect("Failed to decode response text");
+
+    // Assert
+    assert!(status.is_success());
+    assert_eq!(std::env::var("CARGO_PKG_VERSION").unwrap(), content);
+}
+
+#[tokio::test]
 async fn health_check_works() {
     // Arrange
     let app = spawn_app().await;
