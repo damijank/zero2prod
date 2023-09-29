@@ -2,6 +2,7 @@ use once_cell::sync::Lazy;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
 use uuid::Uuid;
+use zero2prod::built_info;
 use zero2prod::configuration::{get_configuration, DatabaseSettings};
 use zero2prod::startup::run;
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
@@ -85,7 +86,7 @@ async fn version_works() {
 
     // Assert
     assert!(status.is_success());
-    assert_eq!(std::env::var("CARGO_PKG_VERSION").unwrap(), content);
+    assert_eq!(built_info::PKG_VERSION, content);
 }
 
 #[tokio::test]
