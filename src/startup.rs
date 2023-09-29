@@ -11,7 +11,7 @@ pub fn run(listener: TcpListener, connection_pool: PgPool) -> Result<Server, std
     let server = HttpServer::new(move || {
         App::new()
             .wrap(TracingLogger::default())
-            .route("/", web::get().to(version))
+            .route("/version", web::get().to(version))
             .route("/health_check", web::get().to(health_check))
             .route("/subscriptions", web::post().to(subscribe))
             .app_data(connection_pool.clone())

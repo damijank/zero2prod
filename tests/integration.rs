@@ -73,7 +73,7 @@ async fn version_works() {
 
     // Act
     let response = client
-        .get(format!("http://{}/", &app.address))
+        .get(format!("http://{}/version", &app.address))
         .send()
         .await
         .expect("Failed to execute request.");
