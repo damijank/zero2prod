@@ -17,7 +17,7 @@ docker-run:
 ##
 ## development
 check:
-	cargo fmt && cargo clippy && cargo check && cargo test && cargo +nightly udeps
+	cargo fmt && cargo deny check advisories && cargo clippy && cargo check && cargo test && cargo +nightly udeps
 .PHONY: check
 
 ##
