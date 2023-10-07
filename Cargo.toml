@@ -1,6 +1,6 @@
 [package]
 name = "zero2prod"
-version = "0.7.8"
+version = "0.8.2"
 edition = "2021"
 authors = ["Damijan Kozic <damijan.poglejsi@gmail.com>"]
 build = "build.rs"
