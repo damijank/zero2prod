@@ -2843,6 +2843,7 @@ name = "zero2prod"
 version = "0.8.2"
 dependencies = [
  "actix-web",
+ "anyhow",
  "built",
  "chrono",
  "claims",
@@ -2859,6 +2860,7 @@ dependencies = [
  "serde-aux",
  "serde_json",
  "sqlx",
+ "thiserror",
  "tokio",
  "tracing",
  "tracing-actix-web",

@@ -1,4 +1,6 @@
 use crate::helpers::spawn_app;
+use chrono::Utc;
+use uuid::Uuid;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, ResponseTemplate};
 
@@ -14,6 +16,23 @@ async fn confirmations_without_token_are_rejected_with_a_400() {
 
     // Assert
     assert_eq!(response.status().as_u16(), 400);
+}
+
+#[tokio::test]
+async fn confirmation_link_with_a_non_existent_token_fails_with_401() {
+    // Arrange
+    let app = spawn_app().await;
+
+    // Act
+    let response = reqwest::get(&format!(
+        "http://{}/subscriptions/confirm?subscription_token={}",
+        app.address, "non-existent-token"
+    ))
+    .await
+    .unwrap();
+
+    // Assert
+    assert_eq!(response.status().as_u16(), 401);
 }
 
 #[tokio::test]
@@ -66,4 +85,55 @@ async fn clicking_on_the_confirmation_link_confirms_a_subscriber() {
     assert_eq!(saved.email, "ursula_le_guin@gmail.com");
     assert_eq!(saved.name, "le guin");
     assert_eq!(saved.status, "confirmed");
+}
+
+#[tokio::test]
+async fn confirmation_fails_if_there_is_a_fatal_database_error_1() {
+    // Arrange
+    let app = spawn_app().await;
+
+    // Provide a subscription token
+    let subscriber_id = Uuid::new_v4();
+    sqlx::query!(
+        r#"
+        INSERT INTO subscriptions (id, email, name, subscribed_at, status)
+        VALUES ($1, $2, $3, $4, $5)
+        "#,
+        subscriber_id,
+        "ursula_le_guin%40gmail.com",
+        "le%20guin",
+        Utc::now(),
+        "pending_confirmation",
+    )
+    .execute(&app.connection_pool)
+    .await
+    .unwrap();
+    sqlx::query!(
+        r#"
+        INSERT INTO subscription_tokens (subscription_token, subscriber_id)
+        VALUES ($1, $2)
+        "#,
+        "real-token",
+        subscriber_id,
+    )
+    .execute(&app.connection_pool)
+    .await
+    .unwrap();
+
+    // Sabotage the database
+    sqlx::query!("ALTER TABLE subscriptions DROP COLUMN status;",)
+        .execute(&app.connection_pool)
+        .await
+        .unwrap();
+
+    // Act
+    let response = reqwest::get(&format!(
+        "http://{}/subscriptions/confirm?subscription_token={}",
+        app.address, "real-token"
+    ))
+    .await
+    .unwrap();
+
+    // Assert
+    assert_eq!(response.status().as_u16(), 500);
 }

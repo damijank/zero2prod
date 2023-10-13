@@ -1,4 +1,6 @@
-use actix_web::{web, HttpResponse};
+use actix_web::{web, HttpResponse, ResponseError};
+use anyhow::Context;
+use reqwest::StatusCode;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -8,24 +10,28 @@ pub struct Parameters {
 }
 
 #[tracing::instrument(name = "Confirm a pending subscriber", skip(pool, parameters))]
-pub async fn confirm(parameters: web::Query<Parameters>, pool: web::Data<PgPool>) -> HttpResponse {
-    let id = match get_subscriber_id_from_token(&pool, &parameters.subscription_token).await {
-        Ok(id) => id,
-        Err(_) => return HttpResponse::InternalServerError().finish(),
-    };
+pub async fn confirm(
+    parameters: web::Query<Parameters>,
+    pool: web::Data<PgPool>,
+) -> Result<HttpResponse, ConfirmError> {
+    let id = get_subscriber_id_from_token(&pool, &parameters.subscription_token)
+        .await
+        .context("Failed to query for a subscriber id.")?;
 
     match id {
-        None => HttpResponse::Unauthorized().finish(),
+        None => Err(ConfirmError::UnauthorizedError(
+            "Provided subscription token could not be found.".into(),
+        )),
         Some(subscriber_id) => {
-            if confirm_subscriber(&pool, subscriber_id).await.is_err() {
-                return HttpResponse::InternalServerError().finish();
-            }
-            HttpResponse::Ok().finish()
+            confirm_subscriber(&pool, subscriber_id)
+                .await
+                .context("Failed to mark a subscriber as confirmed.")?;
+
+            Ok(HttpResponse::Ok().finish())
         }
     }
 }
 
-#[tracing::instrument(name = "Get subscriber_id from token", skip(pool, token))]
 pub async fn get_subscriber_id_from_token(
     pool: &PgPool,
     token: &str,
@@ -37,16 +43,11 @@ pub async fn get_subscriber_id_from_token(
         token,
     )
     .fetch_optional(pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?;
+    .await?;
 
     Ok(result.map(|r| r.subscriber_id))
 }
 
-#[tracing::instrument(name = "Mark subscriber as confirmed", skip(pool, id))]
 pub async fn confirm_subscriber(pool: &PgPool, id: Uuid) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
@@ -56,11 +57,24 @@ pub async fn confirm_subscriber(pool: &PgPool, id: Uuid) -> Result<(), sqlx::Err
         id,
     )
     .execute(pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?;
+    .await?;
 
     Ok(())
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum ConfirmError {
+    #[error("{0}")]
+    UnauthorizedError(String),
+    #[error(transparent)]
+    UnexpectedError(#[from] anyhow::Error),
+}
+
+impl ResponseError for ConfirmError {
+    fn status_code(&self) -> StatusCode {
+        match self {
+            ConfirmError::UnauthorizedError(_) => StatusCode::UNAUTHORIZED,
+            ConfirmError::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
 }

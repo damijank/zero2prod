@@ -8,9 +8,7 @@ impl SubscriberEmail {
         if validate_email(&s) {
             Ok(Self(s))
         } else {
-            let message = format!("{} is not a valid subscriber email.", s);
-            tracing::error!(message);
-            Err(message)
+            Err(format!("'{}' is not a valid subscriber email.", s))
         }
     }
 }
