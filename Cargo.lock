@@ -2840,7 +2840,7 @@ dependencies = [
 
 [[package]]
 name = "zero2prod"
-version = "0.8.6"
+version = "0.9.9"
 dependencies = [
  "actix-web",
  "anyhow",

@@ -115,7 +115,7 @@ pub async fn send_confirmation_email(
 
     email_client
         .send_email(
-            new_subscriber.email,
+            &new_subscriber.email,
             "Welcome!",
             &format!(
                 r#"Welcome to our newsletter!<br>Click <a href="{}">here</a> to confirm your subscription."#,
